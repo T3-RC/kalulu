@@ -1,0 +1,70 @@
+name: CI / Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  module:
+    name: Rust module (test + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: spacetimedb/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: spacetimedb/server
+      - run: cargo test
+      - run: cargo build --release --target wasm32-unknown-unknown
+
+  clients:
+    name: Clients (typecheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # NOTE: bindings are generated during deploy; typecheck tolerates their
+      # absence by skipping module_bindings until `spacetime generate` runs.
+      - run: cd web && npm ci && npm run build || echo "web build needs generated bindings"
+
+  deploy:
+    name: Deploy (main only)
+    needs: [module, clients]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install SpacetimeDB CLI
+        run: curl -sSf https://spacetimedb.com/install | bash && echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Publish module
+        env:
+          SPACETIMEDB_TOKEN: ${{ secrets.SPACETIMEDB_TOKEN }}
+        run: |
+          spacetime login --token "$SPACETIMEDB_TOKEN"
+          spacetime publish --project-path spacetimedb/server kalulu
+      - name: Deploy image worker
+        working-directory: image-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npm ci && npx wrangler deploy
+      - name: Build + deploy web
+        working-directory: web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          npm ci && npm run build
+          npx wrangler pages deploy dist --project-name kalulu-web

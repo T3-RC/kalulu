@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalulu - The Living Memory of Your City</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        /* Main Layout */
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 380px;
+            background: #111;
+            border-right: 1px solid #222;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #222;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .tagline {
+            font-size: 13px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            padding: 16px 20px;
+            background: #0d0d0d;
+            border-bottom: 1px solid #222;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        /* Tab Navigation */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #222;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 14px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab:hover {
+            color: #999;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        /* Feed */
+        .feed {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .feed::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .feed::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 3px;
+        }
+
+        /* Event Card */
+        .event-card {
+            background: #1a1a1a;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+        }
+
+        .event-header {
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .event-name {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .event-meta {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .event-heat {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .event-photos {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            padding: 0 2px 2px;
+        }
+
+        .event-photo {
+            aspect-ratio: 1;
+            background-size: cover;
+            background-position: center;
+            background-color: #222;
+        }
+
+        /* Post Card */
+        .post-card {
+            background: #1a1a1a;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .post-image {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background-size: cover;
+            background-position: center;
+            background-color: #222;
+        }
+
+        .post-info {
+            padding: 14px 16px;
+        }
+
+        .post-location {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .post-time {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .post-caption {
+            font-size: 13px;
+            color: #aaa;
+            margin-top: 8px;
+        }
+
+        /* Map Container */
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Custom Markers */
+        .custom-marker {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: 3px solid #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .custom-marker:hover {
+            transform: scale(1.1);
+        }
+
+        .custom-marker.event {
+            width: 48px;
+            height: 48px;
+            font-size: 14px;
+        }
+
+        .photo-marker {
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            background-size: cover;
+            background-position: center;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .photo-marker:hover {
+            transform: scale(1.15);
+        }
+
+        /* Upload Button */
+        .upload-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            z-index: 1000;
+        }
+
+        .upload-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 30px rgba(102, 126, 234, 0.5);
+        }
+
+        .upload-btn svg {
+            width: 28px;
+            height: 28px;
+            fill: #fff;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: #1a1a1a;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 480px;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: translateY(20px);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        /* Upload Form */
+        .upload-zone {
+            border: 2px dashed #333;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 20px;
+        }
+
+        .upload-zone:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .upload-zone.has-image {
+            padding: 0;
+            border: none;
+        }
+
+        .upload-zone img {
+            width: 100%;
+            border-radius: 12px;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .upload-text {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: #999;
+        }
+
+        .form-input {
+            width: 100%;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .location-display {
+            background: #111;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .location-display.active {
+            color: #667eea;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 14px;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Photo Viewer Modal */
+        .photo-viewer {
+            max-width: 600px;
+        }
+
+        .photo-viewer .modal-body {
+            padding: 0;
+        }
+
+        .viewer-image {
+            width: 100%;
+            max-height: 60vh;
+            object-fit: contain;
+            background: #000;
+        }
+
+        .viewer-info {
+            padding: 20px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #333;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Leaflet Customization */
+        .leaflet-container {
+            background: #1a1a1a;
+        }
+
+        .leaflet-popup-content-wrapper {
+            background: #1a1a1a;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .leaflet-popup-content {
+            margin: 0;
+            color: #fff;
+        }
+
+        .leaflet-popup-tip {
+            background: #1a1a1a;
+        }
+
+        .popup-content {
+            width: 200px;
+        }
+
+        .popup-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .popup-info {
+            padding: 12px;
+        }
+
+        .popup-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .popup-meta {
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">Kalulu</div>
+                <div class="tagline">The living memory of your city</div>
+            </div>
+
+            <div class="stats-bar">
+                <div class="stat">
+                    <div class="stat-value" id="stat-posts">0</div>
+                    <div class="stat-label">Posts</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="stat-events">0</div>
+                    <div class="stat-label">Events</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="stat-hoods">0</div>
+                    <div class="stat-label">Hoods</div>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" data-tab="events">Events</div>
+                <div class="tab" data-tab="posts">All Posts</div>
+                <div class="tab" data-tab="neighborhoods">Hoods</div>
+            </div>
+
+            <div class="feed" id="feed">
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map -->
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+
+        <!-- Upload Button -->
+        <button class="upload-btn" id="upload-btn">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        </button>
+    </div>
+
+    <!-- Upload Modal -->
+    <div class="modal-overlay" id="upload-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Share a moment</div>
+                <button class="modal-close" id="close-upload">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-zone" id="upload-zone">
+                    <div class="upload-icon">📷</div>
+                    <div class="upload-text">Click or drag to upload a photo</div>
+                </div>
+                <input type="file" id="file-input" accept="image/*" style="display: none;">
+                
+                <div class="form-group">
+                    <label class="form-label">Caption (optional)</label>
+                    <input type="text" class="form-input" id="caption-input" placeholder="What's happening?">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Location</label>
+                    <div class="location-display" id="location-display">
+                        📍 Click on map or allow location access
+                    </div>
+                </div>
+                
+                <button class="submit-btn" id="submit-btn" disabled>Share to Kalulu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Viewer Modal -->
+    <div class="modal-overlay" id="photo-modal">
+        <div class="modal photo-viewer">
+            <div class="modal-header">
+                <div class="modal-title" id="photo-title"></div>
+                <button class="modal-close" id="close-photo">&times;</button>
+            </div>
+            <div class="modal-body">
+                <img class="viewer-image" id="viewer-image" src="" alt="">
+                <div class="viewer-info">
+                    <div id="photo-location"></div>
+                    <div id="photo-time" style="color: #666; font-size: 13px; margin-top: 4px;"></div>
+                    <div id="photo-caption" style="margin-top: 12px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Configuration
+        const API_BASE = 'http://localhost:8000';
+        
+        // State
+        let map;
+        let markers = [];
+        let currentTab = 'events';
+        let selectedLocation = null;
+        let selectedFile = null;
+        let posts = [];
+        let events = [];
+
+        // Initialize map
+        function initMap() {
+            // NYC center
+            map = L.map('map', {
+                zoomControl: false
+            }).setView([40.7128, -74.0060], 13);
+
+            // Dark map tiles
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
+
+            // Add zoom control to bottom right
+            L.control.zoom({ position: 'bottomleft' }).addTo(map);
+
+            // Map click for location selection
+            map.on('click', (e) => {
+                if (document.getElementById('upload-modal').classList.contains('active')) {
+                    selectedLocation = {
+                        lat: e.latlng.lat,
+                        lng: e.latlng.lng
+                    };
+                    updateLocationDisplay();
+                }
+            });
+
+            // Load data when map moves
+            map.on('moveend', loadMapData);
+        }
+
+        // Load data based on map bounds
+        async function loadMapData() {
+            const bounds = map.getBounds();
+            
+            try {
+                // Load posts
+                const postsRes = await fetch(`${API_BASE}/posts?min_lat=${bounds.getSouth()}&max_lat=${bounds.getNorth()}&min_lng=${bounds.getWest()}&max_lng=${bounds.getEast()}&limit=200`);
+                posts = await postsRes.json();
+                
+                // Load events
+                const eventsRes = await fetch(`${API_BASE}/events?min_lat=${bounds.getSouth()}&max_lat=${bounds.getNorth()}&min_lng=${bounds.getWest()}&max_lng=${bounds.getEast()}`);
+                events = await eventsRes.json();
+                
+                updateMarkers();
+                updateFeed();
+            } catch (err) {
+                console.error('Failed to load data:', err);
+            }
+        }
+
+        // Update map markers
+        function updateMarkers() {
+            // Clear existing markers
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+
+            if (currentTab === 'events') {
+                // Show event clusters
+                events.forEach(event => {
+                    const el = document.createElement('div');
+                    el.className = 'custom-marker event';
+                    el.innerHTML = event.post_count;
+                    
+                    const marker = L.marker([event.center_lat, event.center_lng], {
+                        icon: L.divIcon({
+                            html: el.outerHTML,
+                            className: '',
+                            iconSize: [48, 48],
+                            iconAnchor: [24, 24]
+                        })
+                    }).addTo(map);
+
+                    marker.on('click', () => showEventDetail(event));
+                    markers.push(marker);
+                });
+            } else {
+                // Show individual posts
+                posts.forEach(post => {
+                    const el = document.createElement('div');
+                    el.className = 'photo-marker';
+                    el.style.backgroundImage = `url(${API_BASE}${post.media_url})`;
+                    
+                    const marker = L.marker([post.latitude, post.longitude], {
+                        icon: L.divIcon({
+                            html: el.outerHTML,
+                            className: '',
+                            iconSize: [44, 44],
+                            iconAnchor: [22, 22]
+                        })
+                    }).addTo(map);
+
+                    marker.on('click', () => showPhotoDetail(post));
+                    markers.push(marker);
+                });
+            }
+        }
+
+        // Update sidebar feed
+        function updateFeed() {
+            const feed = document.getElementById('feed');
+            
+            if (currentTab === 'events') {
+                if (events.length === 0) {
+                    feed.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🎉</div>
+                            <div>No events detected yet</div>
+                            <div style="font-size: 13px; margin-top: 8px;">Upload photos to create events!</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                feed.innerHTML = events.map(event => `
+                    <div class="event-card" onclick="showEventDetail(${JSON.stringify(event).replace(/"/g, '&quot;')})">
+                        <div class="event-header">
+                            <div>
+                                <div class="event-name">${event.name}</div>
+                                <div class="event-meta">📍 ${event.neighborhood || 'NYC'} · ${event.post_count} photos</div>
+                            </div>
+                            <div class="event-heat">🔥 ${Math.round(event.heat_score)}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } else if (currentTab === 'posts') {
+                if (posts.length === 0) {
+                    feed.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📸</div>
+                            <div>No posts in this area</div>
+                            <div style="font-size: 13px; margin-top: 8px;">Be the first to share!</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                feed.innerHTML = posts.map(post => `
+                    <div class="post-card" onclick='showPhotoDetail(${JSON.stringify(post)})'>
+                        <div class="post-image" style="background-image: url(${API_BASE}${post.media_url})"></div>
+                        <div class="post-info">
+                            <div class="post-location">📍 ${post.neighborhood || 'NYC'}</div>
+                            <div class="post-time">${formatTime(post.timestamp)}</div>
+                            ${post.caption ? `<div class="post-caption">${post.caption}</div>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            } else if (currentTab === 'neighborhoods') {
+                loadNeighborhoods();
+            }
+        }
+
+        // Load neighborhoods
+        async function loadNeighborhoods() {
+            const feed = document.getElementById('feed');
+            try {
+                const res = await fetch(`${API_BASE}/neighborhoods`);
+                const hoods = await res.json();
+                
+                if (hoods.length === 0) {
+                    feed.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🏘️</div>
+                            <div>No neighborhoods active yet</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                feed.innerHTML = hoods.map(hood => `
+                    <div class="event-card">
+                        <div class="event-header">
+                            <div>
+                                <div class="event-name">${hood.name}</div>
+                                <div class="event-meta">${hood.post_count} posts</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error('Failed to load neighborhoods:', err);
+            }
+        }
+
+        // Load stats
+        async function loadStats() {
+            try {
+                const res = await fetch(`${API_BASE}/stats`);
+                const stats = await res.json();
+                
+                document.getElementById('stat-posts').textContent = stats.total_posts;
+                document.getElementById('stat-events').textContent = stats.total_events;
+                document.getElementById('stat-hoods').textContent = stats.neighborhoods_active;
+            } catch (err) {
+                console.error('Failed to load stats:', err);
+            }
+        }
+
+        // Show event detail
+        function showEventDetail(event) {
+            if (typeof event === 'string') {
+                event = JSON.parse(event);
+            }
+            map.flyTo([event.center_lat, event.center_lng], 16);
+        }
+
+        // Show photo detail
+        function showPhotoDetail(post) {
+            if (typeof post === 'string') {
+                post = JSON.parse(post);
+            }
+            
+            document.getElementById('photo-title').textContent = post.neighborhood || 'NYC';
+            document.getElementById('viewer-image').src = `${API_BASE}${post.media_url}`;
+            document.getElementById('photo-location').textContent = `📍 ${post.neighborhood || 'NYC'}`;
+            document.getElementById('photo-time').textContent = formatTime(post.timestamp);
+            document.getElementById('photo-caption').textContent = post.caption || '';
+            
+            document.getElementById('photo-modal').classList.add('active');
+        }
+
+        // Format timestamp
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) return 'Just now';
+            if (diff < 3600000) return `${Math.floor(diff/60000)}m ago`;
+            if (diff < 86400000) return `${Math.floor(diff/3600000)}h ago`;
+            
+            return date.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        }
+
+        // Update location display
+        function updateLocationDisplay() {
+            const el = document.getElementById('location-display');
+            if (selectedLocation) {
+                el.textContent = `📍 ${selectedLocation.lat.toFixed(5)}, ${selectedLocation.lng.toFixed(5)}`;
+                el.classList.add('active');
+                checkSubmitReady();
+            }
+        }
+
+        // Check if ready to submit
+        function checkSubmitReady() {
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = !(selectedFile && selectedLocation);
+        }
+
+        // Upload photo
+        async function uploadPhoto() {
+            if (!selectedFile || !selectedLocation) return;
+            
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.textContent = 'Uploading...';
+            
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('latitude', selectedLocation.lat);
+            formData.append('longitude', selectedLocation.lng);
+            formData.append('timestamp', new Date().toISOString());
+            
+            const caption = document.getElementById('caption-input').value;
+            if (caption) formData.append('caption', caption);
+            
+            try {
+                const res = await fetch(`${API_BASE}/posts`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (res.ok) {
+                    // Reset form
+                    selectedFile = null;
+                    selectedLocation = null;
+                    document.getElementById('upload-zone').innerHTML = `
+                        <div class="upload-icon">📷</div>
+                        <div class="upload-text">Click or drag to upload a photo</div>
+                    `;
+                    document.getElementById('upload-zone').classList.remove('has-image');
+                    document.getElementById('caption-input').value = '';
+                    document.getElementById('location-display').textContent = '📍 Click on map or allow location access';
+                    document.getElementById('location-display').classList.remove('active');
+                    
+                    // Close modal and reload
+                    document.getElementById('upload-modal').classList.remove('active');
+                    loadMapData();
+                    loadStats();
+                }
+            } catch (err) {
+                console.error('Upload failed:', err);
+                alert('Upload failed. Please try again.');
+            }
+            
+            btn.disabled = false;
+            btn.textContent = 'Share to Kalulu';
+        }
+
+        // Get current location
+        function getCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        selectedLocation = {
+                            lat: pos.coords.latitude,
+                            lng: pos.coords.longitude
+                        };
+                        updateLocationDisplay();
+                        map.flyTo([selectedLocation.lat, selectedLocation.lng], 15);
+                    },
+                    (err) => {
+                        console.log('Location access denied');
+                    }
+                );
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            loadMapData();
+            loadStats();
+
+            // Tab switching
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentTab = tab.dataset.tab;
+                    updateMarkers();
+                    updateFeed();
+                });
+            });
+
+            // Upload modal
+            document.getElementById('upload-btn').addEventListener('click', () => {
+                document.getElementById('upload-modal').classList.add('active');
+                getCurrentLocation();
+            });
+
+            document.getElementById('close-upload').addEventListener('click', () => {
+                document.getElementById('upload-modal').classList.remove('active');
+            });
+
+            // Photo modal
+            document.getElementById('close-photo').addEventListener('click', () => {
+                document.getElementById('photo-modal').classList.remove('active');
+            });
+
+            // File upload
+            const uploadZone = document.getElementById('upload-zone');
+            const fileInput = document.getElementById('file-input');
+
+            uploadZone.addEventListener('click', () => fileInput.click());
+            
+            uploadZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadZone.style.borderColor = '#667eea';
+            });
+
+            uploadZone.addEventListener('dragleave', () => {
+                uploadZone.style.borderColor = '#333';
+            });
+
+            uploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadZone.style.borderColor = '#333';
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    handleFile(file);
+                }
+            });
+
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files[0]) {
+                    handleFile(fileInput.files[0]);
+                }
+            });
+
+            function handleFile(file) {
+                selectedFile = file;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    uploadZone.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+                    uploadZone.classList.add('has-image');
+                    checkSubmitReady();
+                };
+                reader.readAsDataURL(file);
+            }
+
+            // Submit
+            document.getElementById('submit-btn').addEventListener('click', uploadPhoto);
+
+            // Close modals on overlay click
+            document.querySelectorAll('.modal-overlay').forEach(overlay => {
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) {
+                        overlay.classList.remove('active');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

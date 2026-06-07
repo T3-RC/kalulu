@@ -1,0 +1,25 @@
+[package]
+name = "kalulu-module"
+version = "1.0.0"
+edition = "2021"
+description = "Kalulu SpacetimeDB server module (tables + reducers + clustering)"
+
+# SpacetimeDB modules compile to a WebAssembly cdylib.
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Pin to the SpacetimeDB version your CLI reports (`spacetime --version`).
+# The macro API used here (#[table(name = ...)], #[reducer], ctx.db.*) is the
+# 1.x / 2.0 API. If you upgrade major versions, re-check the migration notes:
+# https://spacetimedb.com/docs/upgrade
+spacetimedb = "1"
+log = "0.4"
+
+[profile.release]
+# Smaller, faster WASM for production.
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

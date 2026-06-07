@@ -1,0 +1,30 @@
+name = "kalulu-image-worker"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# R2 bucket binding (the Worker reads originals from here for /img).
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "kalulu-uploads"
+
+# Cloudflare Images binding for on-demand resizing (optional but recommended).
+# Remove this block if you don't have Images enabled; /img falls back to originals.
+[images]
+binding = "IMAGES"
+
+# Non-secret vars.
+[vars]
+R2_BUCKET = "kalulu-uploads"
+PUBLIC_BASE = "https://img.kalulu.app"   # the route this Worker serves on
+
+# Route the Worker on your zone (adjust to your domain).
+# [[routes]]
+# pattern = "img.kalulu.app/*"
+# zone_name = "kalulu.app"
+
+# Secrets — set with `wrangler secret put <NAME>` (never commit these):
+#   R2_ACCOUNT_ID          your Cloudflare account id
+#   R2_ACCESS_KEY_ID       R2 S3 API access key id
+#   R2_SECRET_ACCESS_KEY   R2 S3 API secret
+#   UPLOAD_TOKEN           shared secret required by POST /uploads/presign

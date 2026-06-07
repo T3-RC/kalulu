@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Builds
+dist/
+.vite/
+
+# Env (set these in Vercel instead; .env.example stays tracked)
+.env
+.env.local
+*.local
+
+# Rust
+target/
+
+# SQLite / local data
+*.db
+.spacetime/
+
+# Logs / OS
+*.log
+.DS_Store
+
+# NOTE: spacetimedb/client/src/module_bindings/ is intentionally committed
+# so the host can build the web app without the SpacetimeDB CLI.

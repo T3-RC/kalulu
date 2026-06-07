@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "Kalulu",
+    "slug": "kalulu",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0a"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.kalulu.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Kalulu needs camera access to capture moments",
+        "NSPhotoLibraryUsageDescription": "Kalulu needs photo library access to share your photos",
+        "NSLocationWhenInUseUsageDescription": "Kalulu needs your location to tag where your moments happen"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0a0a0a"
+      },
+      "package": "com.kalulu.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Kalulu to access your camera to capture moments."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Kalulu to access your photos to share memories.",
+          "savePhotosPermission": "Allow Kalulu to save photos to your library."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Kalulu to use your location to tag your moments."
+        }
+      ]
+    ]
+  }
+}

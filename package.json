@@ -1,0 +1,9 @@
+{
+  "name": "kalulu",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kalulu monorepo — SpacetimeDB module + shared client + web app",
+  "scripts": {
+    "build": "npm install --prefix spacetimedb/client && npm install --prefix web && npm run build --prefix web"
+  }
+}
