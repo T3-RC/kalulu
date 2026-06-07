@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import { useKaluluConnection, usePosts, useEvents, useLikes, useKalulu } from "@client/hooks";
-import type { Post } from "@client/kalulu";
+import type { Post, EventRow } from "@client/kalulu";
 import { uploadImage, bestEffortCaptureTime } from "./upload";
 
 const NYC: [number, number] = [40.7308, -73.9973];
@@ -29,7 +29,7 @@ export default function App() {
       </header>
 
       <div className="layout">
-        <MapView posts={posts} onSelect={setSelected} />
+        <MapView posts={posts} events={events} onSelect={setSelected} />
         <aside className="sidebar">
           <UploadPanel />
           <h2>Events ({events.length})</h2>
@@ -64,7 +64,7 @@ export default function App() {
   );
 }
 
-function MapView({ posts, onSelect }: { posts: Post[]; onSelect: (p: Post) => void }) {
+function MapView({ posts, events, onSelect }: { posts: Post[]; events: EventRow[]; onSelect: (p: Post) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
@@ -84,6 +84,19 @@ function MapView({ posts, onSelect }: { posts: Post[]; onSelect: (p: Post) => vo
     const layer = layerRef.current;
     if (!layer) return;
     layer.clearLayers();
+    // Event "heat" circles sit under the post markers.
+    for (const e of events) {
+      L.circle([e.centerLat, e.centerLng], {
+        radius: Math.max(e.radiusMeters, 80),
+        color: "#667eea",
+        weight: 1,
+        opacity: 0.5,
+        fillColor: "#667eea",
+        fillOpacity: Math.min(0.06 + e.heatScore / 600, 0.3),
+      })
+        .bindTooltip(e.name)
+        .addTo(layer);
+    }
     for (const p of posts) {
       const marker = L.circleMarker([p.latitude, p.longitude], {
         radius: 6,
@@ -96,7 +109,7 @@ function MapView({ posts, onSelect }: { posts: Post[]; onSelect: (p: Post) => vo
       if (p.caption) marker.bindTooltip(p.caption);
       marker.addTo(layer);
     }
-  }, [posts, onSelect]);
+  }, [posts, events, onSelect]);
 
   return <div className="map" ref={ref} />;
 }
