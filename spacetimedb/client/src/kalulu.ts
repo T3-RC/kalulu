@@ -186,59 +186,51 @@ export class KaluluClient {
     avatarUrl?: string;
     email?: string;
   }) {
-    this.conn?.reducers.setProfile(
-      opts.username ?? null,
-      opts.displayName ?? null,
-      opts.avatarUrl ?? null,
-      opts.email ?? null,
-    );
+    this.conn?.reducers.setProfile({
+      username: opts.username ?? null,
+      displayName: opts.displayName ?? null,
+      avatarUrl: opts.avatarUrl ?? null,
+      email: opts.email ?? null,
+    });
   }
 
   createPost(mediaUrl: string, latitude: number, longitude: number, when: Date, caption?: string) {
-    this.conn?.reducers.createPost(
+    this.conn?.reducers.createPost({
       mediaUrl,
       latitude,
       longitude,
-      Timestamp.fromDate(when),
-      caption ?? null,
-    );
+      timestamp: Timestamp.fromDate(when),
+      caption: caption ?? null,
+    });
   }
 
   setThumbnail(postId: bigint, url: string) {
-    this.conn?.reducers.setThumbnail(postId, url);
+    this.conn?.reducers.setThumbnail({ postId, thumbnailUrl: url });
   }
   setPostVisibility(postId: bigint, visibility: "public" | "private" | "hidden") {
-    this.conn?.reducers.setPostVisibility(postId, visibility);
+    this.conn?.reducers.setPostVisibility({ postId, visibility });
   }
   deletePost(postId: bigint) {
-    this.conn?.reducers.deletePost(postId);
+    this.conn?.reducers.deletePost({ postId });
   }
 
   likePost(postId: bigint) {
-    this.conn?.reducers.likePost(postId);
+    this.conn?.reducers.likePost({ postId });
   }
   unlikePost(postId: bigint) {
-    this.conn?.reducers.unlikePost(postId);
+    this.conn?.reducers.unlikePost({ postId });
   }
   addComment(postId: bigint, content: string) {
-    this.conn?.reducers.addComment(postId, content);
+    this.conn?.reducers.addComment({ postId, content });
   }
   deleteComment(commentId: bigint) {
-    this.conn?.reducers.deleteComment(commentId);
+    this.conn?.reducers.deleteComment({ commentId });
   }
   followUser(userId: Identity) {
-    this.conn?.reducers.followUser(userId);
+    this.conn?.reducers.followUser({ followingId: userId });
   }
   unfollowUser(userId: Identity) {
-    this.conn?.reducers.unfollowUser(userId);
-  }
-
-  /**
-   * SpacetimeDB `Timestamp` is microseconds since the UNIX epoch (as bigint in
-   * the generated bindings). Convert a JS Date accordingly.
-   */
-  private toTimestampMicros(d: Date): bigint {
-    return BigInt(d.getTime()) * 1000n;
+    this.conn?.reducers.unfollowUser({ followingId: userId });
   }
 }
 
