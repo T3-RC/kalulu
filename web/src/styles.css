@@ -69,3 +69,5 @@ body {
 .modal img { width: 100%; max-height: 60vh; object-fit: contain; background: #000; }
 .modal-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .modal-body .close { background: #1a1a1a; }
+
+.loc-picker { height: 180px; border-radius: 10px; overflow: hidden; margin: 8px 0; border: 1px solid var(--border); }

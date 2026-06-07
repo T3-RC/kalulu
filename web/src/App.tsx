@@ -3,6 +3,8 @@ import L from "leaflet";
 import { useKaluluConnection, usePosts, useEvents, useLikes, useKalulu } from "@client/hooks";
 import type { Post, EventRow } from "@client/kalulu";
 import { uploadImage, bestEffortCaptureTime } from "./upload";
+import exifr from "exifr";
+import { LocationPicker } from "./LocationPicker";
 
 const NYC: [number, number] = [40.7308, -73.9973];
 
@@ -156,32 +158,57 @@ function PostModal({ post, onClose }: { post: Post; onClose: () => void }) {
 
 function UploadPanel() {
   const { createPost } = useKalulu();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
+  const [coords, setCoords] = useState<{ lat: number; lng: number }>({ lat: NYC[0], lng: NYC[1] });
+  const [locSource, setLocSource] = useState<string>("");
+  const [captureTime, setCaptureTime] = useState<Date>(new Date());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
-  const getLocation = () =>
-    new Promise<{ lat: number; lng: number }>((resolve) => {
-      if (!navigator.geolocation) return resolve({ lat: NYC[0], lng: NYC[1] });
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => resolve({ lat: NYC[0], lng: NYC[1] }),
-        { timeout: 5000 },
-      );
-    });
+  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0] ?? null;
+    setFile(f);
+    setError(null);
+    if (!f) return;
+    setCaptureTime(bestEffortCaptureTime(f));
+
+    // Prefer the photo's own EXIF GPS + capture time.
+    try {
+      const meta = await exifr.parse(f, ["GPSLatitude", "GPSLongitude", "DateTimeOriginal"]).catch(() => null);
+      const gps = await exifr.gps(f).catch(() => null);
+      if (meta?.DateTimeOriginal) setCaptureTime(new Date(meta.DateTimeOriginal));
+      if (gps && typeof gps.latitude === "number") {
+        setCoords({ lat: gps.latitude, lng: gps.longitude });
+        setLocSource("📍 location read from the photo");
+        return;
+      }
+    } catch {
+      /* ignore */
+    }
+
+    // No GPS in the photo (e.g. downloaded from Google Photos) — fall back to
+    // device location and let the user drag the pin.
+    setLocSource("This photo has no GPS — drag the pin to where it was taken.");
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => setCoords({ lat: NYC[0], lng: NYC[1] }),
+      { timeout: 5000 },
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const file = fileRef.current?.files?.[0];
     if (!file) return;
     setBusy(true);
     setError(null);
     try {
       const { publicUrl } = await uploadImage(file);
-      const { lat, lng } = await getLocation();
-      createPost(publicUrl, lat, lng, bestEffortCaptureTime(file), caption || undefined);
+      createPost(publicUrl, coords.lat, coords.lng, captureTime, caption || undefined);
+      setFile(null);
       setCaption("");
+      setLocSource("");
       if (fileRef.current) fileRef.current.value = "";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
@@ -193,7 +220,13 @@ function UploadPanel() {
   return (
     <form className="upload" onSubmit={handleSubmit}>
       <h2>Share a moment</h2>
-      <input ref={fileRef} type="file" accept="image/*" required />
+      <input ref={fileRef} type="file" accept="image/*" required onChange={onPick} />
+      {file && (
+        <>
+          <LocationPicker value={coords} onChange={setCoords} />
+          {locSource && <div className="meta">{locSource}</div>}
+        </>
+      )}
       <input
         type="text"
         placeholder="Caption (optional)"
